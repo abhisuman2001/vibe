@@ -36,7 +36,7 @@
         "types": ["node", "express"],
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
-        "noEmitOnError": true,
+        // "noEmitOnError": true,
         "skipLibCheck": true,
         "inlineSources": true
     },

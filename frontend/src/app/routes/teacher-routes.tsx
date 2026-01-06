@@ -16,6 +16,7 @@ import AISectionPage from "@/app/pages/teacher/AISectionPage";
 import AnomaliesList from "../pages/teacher/AnomaliesList";
 import RegisteredUsers from "../pages/teacher/CourseRegistrationRequests";
 import FeedbackFormEditor from "../pages/teacher/FeedbackFormEditor";
+// import CreateCourse from "@/app/pages/teacher/AddCoursePage";
 
 const teacherRoutes: RouteObject = {
   path: "/teacher",

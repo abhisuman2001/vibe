@@ -1,6 +1,9 @@
-"use client"
-
-import React, { useState } from "react"
+// Abhishek Suman made changes: Move React import to the top to fix initialization error
+import React, { useState } from "react";
+import CalendarHeatmap from 'react-calendar-heatmap';
+import 'react-calendar-heatmap/dist/styles.css';
+import './profile-heatmap-github.css';
+// ...existing code...
 import { Mail, User, Shield, Pencil, BookOpen, Clock, Award } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -17,6 +20,7 @@ import { LogOut } from "lucide-react"
 import ConfirmationModal from "@/app/pages/teacher/components/confirmation-modal"
 import { Skeleton } from "@/components/ui/skeleton"
 
+// Abhishek Suman made changes: Add year selection for activity chart
 export default function UserProfile({ role = "student" }: { role?: "student" | "teacher" | "admin" }) {
   const { user, setUser } = useAuthStore()
   const navigate = useNavigate()
@@ -30,6 +34,87 @@ export default function UserProfile({ role = "student" }: { role?: "student" | "
   const { data: enrollmentsData, isLoading: enrollmentsLoading } = useUserEnrollments(1, 100, !!token);
   const { data: watchtimeData, isLoading: watchtimeLoading } = useWatchtimeTotal();
 
+  // Abhishek Suman made changes: Add year selection for activity chart
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = React.useState(currentYear);
+  const [activityData, setActivityData] = React.useState<{ date: Date, count: number }[]>([]);
+  // Abhishek Suman made changes: Added detailed debugging for heatmap API calls
+  React.useEffect(() => {
+    async function fetchActivity() {
+      try {
+        if (!user?.uid) {
+          console.log('No user UID available');
+          return;
+        }
+        if (!token) {
+          console.log('No token available');
+          return;
+        }
+        
+        console.log('Fetching activity data for user:', user.uid, 'year:', selectedYear);
+        const res = await fetch(`/api/users/${user.uid}/activity?year=${selectedYear}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        console.log('API response status:', res.status);
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('Failed to fetch activity data:', res.status, res.statusText, errorText);
+          return;
+        }
+        const data = await res.json();
+        console.log('Activity data received:', data);
+        // Abhishek Suman made changes: Convert date strings to Date objects for proper heatmap display
+        // Simple approach: parse date components and create in local timezone
+        const formattedData = data.map((item: { date: string; count: number }) => {
+          const [year, month, day] = item.date.split('-').map(Number);
+          // Create date in local timezone (Indian timezone)
+          const date = new Date(year, month - 1, day); // month is 0-indexed, no time specified = midnight local
+          return {
+            date: date,
+            count: item.count
+          };
+        });
+        console.log('Formatted activity data:', formattedData);
+        // Abhishek Suman made changes: Debug the continuous year flow calculation
+        const prevYearEnd = new Date(selectedYear - 1, 11, 31);
+        const jan1 = new Date(selectedYear, 0, 1);
+        const dec31 = new Date(selectedYear, 11, 31);
+        
+        console.log(`Previous year (${selectedYear - 1}) ended on: ${prevYearEnd.toDateString()} (${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][prevYearEnd.getDay()]})`);
+        console.log(`Current year (${selectedYear}) starts on: ${jan1.toDateString()} (${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][jan1.getDay()]})`);
+        console.log(`Current year (${selectedYear}) ends on: ${dec31.toDateString()} (${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dec31.getDay()]})`);
+        
+        // Calculate the actual heatmap range
+        const startDayOfWeek = jan1.getDay();
+        const heatmapStart = new Date(jan1);
+        heatmapStart.setDate(jan1.getDate() - startDayOfWeek);
+        
+        const endDayOfWeek = dec31.getDay();
+        const heatmapEnd = new Date(dec31);
+        heatmapEnd.setDate(dec31.getDate() + (6 - endDayOfWeek));
+        
+        console.log(`Heatmap range: ${heatmapStart.toDateString()} to ${heatmapEnd.toDateString()}`);
+        // Abhishek Suman made changes: Debug the exact dates being passed to heatmap
+        formattedData.forEach((item: { date: Date; count: number }) => {
+          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const originalDate = data.find(d => d.count === item.count)?.date;
+          const localDateStr = item.date.getFullYear() + '-' + 
+                              String(item.date.getMonth() + 1).padStart(2, '0') + '-' + 
+                              String(item.date.getDate()).padStart(2, '0');
+          const dayOfWeek = dayNames[item.date.getDay()];
+          console.log(`Original: ${originalDate} -> Local: ${localDateStr} (${dayOfWeek}) - ${item.count} minutes`);
+        });
+        setActivityData(formattedData);
+      } catch (e) {
+        console.error('Error fetching activity data:', e);
+      }
+    }
+    fetchActivity();
+  }, [user?.uid, selectedYear, token]);
+
   // Calculate statistics
   const totalEnrollments = enrollmentsData?.totalDocuments || 0;
   
@@ -42,7 +127,7 @@ export default function UserProfile({ role = "student" }: { role?: "student" | "
     // Calculate total completed items and total items across all enrollments
     const { totalCompleted, totalItems } = enrollments.reduce((acc, enrollment) => {
       const completed = typeof enrollment.completedItems === 'number' ? enrollment.completedItems : 0;
-      const total = enrollment.contentCounts?.totalItems || 0;
+      const total = (enrollment.contentCounts as any)?.totalItems || 0;
       return {
         totalCompleted: acc.totalCompleted + completed,
         totalItems: acc.totalItems + (total > 0 ? total : 1) // Avoid division by zero
@@ -106,6 +191,8 @@ export default function UserProfile({ role = "student" }: { role?: "student" | "
           <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight">Profile</h1>
           <p className="text-muted-foreground text-sm md:text-base">Your personal information and details</p>
         </section>
+
+        {/* Abhishek Suman made changes: Move Activity Chart below stats, center and compact */}
         <ConfirmationModal isOpen={confirmLogout}
           onClose={() => setConfirmLogout(false)}
           onConfirm={handleLogout}
@@ -286,7 +373,7 @@ export default function UserProfile({ role = "student" }: { role?: "student" | "
                   ) : (
                     <div className="text-2xl font-bold text-primary flex items-center justify-center gap-1">
                       <Clock className="h-4 w-4" />
-                      {(watchtimeData / 3600 || 0).toFixed(2)}h
+                      {(watchtimeData ? watchtimeData / 3600 : 0).toFixed(2)}h
                     </div>
                   )}
                   <p className="text-sm text-muted-foreground">Study Time</p>
@@ -343,6 +430,101 @@ export default function UserProfile({ role = "student" }: { role?: "student" | "
           </Card> */}
         
       </div>
+
+      {/* Only show activity chart for student profile */}
+      {role === "student" && (
+        <div className="w-full flex flex-col items-center my-8">
+          <h3 className="text-lg font-semibold mb-2">Activity Chart</h3>
+          <div className="flex flex-row gap-2 mb-4">
+            {[...Array(4)].map((_, idx) => {
+              const year = currentYear - idx;
+              return (
+                <button
+                  key={year}
+                  className={`px-4 py-1 rounded font-medium transition-colors border ${selectedYear === year ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-border hover:bg-muted'}`}
+                  style={{ minWidth: 70 }}
+                  onClick={() => setSelectedYear(year)}
+                >
+                  {year}
+                </button>
+              );
+            })}
+          </div>
+          <div
+            style={{
+              width: '100%',
+              maxWidth: 900,
+              overflowX: 'auto',
+              padding: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              background: 'hsl(var(--card))',
+              borderRadius: 12,
+              border: '1px solid hsl(var(--border))',
+              boxShadow: '0 2px 16px 0 rgba(0,0,0,0.10)',
+            }}
+          >
+            <CalendarHeatmap
+              // Abhishek Suman made changes: Calculate start date to continue from where previous year ended
+              startDate={(() => {
+                // Calculate where the previous year ended to start the new year from the next day
+                const prevYearEnd = new Date(selectedYear - 1, 11, 31); // December 31st of previous year
+                const startDate = new Date(prevYearEnd);
+                startDate.setDate(prevYearEnd.getDate() + 1); // Start from January 1st of selected year
+                
+                // But we need to go back to the Sunday of the week that contains this date
+                // to ensure we show complete weeks
+                const dayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+                const adjustedStartDate = new Date(startDate);
+                adjustedStartDate.setDate(startDate.getDate() - dayOfWeek);
+                
+                return adjustedStartDate;
+              })()}
+              endDate={(() => {
+                // End date should complete the week that contains December 31st
+                const dec31 = new Date(selectedYear, 11, 31);
+                const dayOfWeek = dec31.getDay();
+                const adjustedEndDate = new Date(dec31);
+                adjustedEndDate.setDate(dec31.getDate() + (6 - dayOfWeek)); // Go to Saturday of that week
+                
+                return adjustedEndDate;
+              })()}
+              values={activityData}
+              classForValue={(value: any) => {
+                if (!value || !value.count || value.count === 0) return 'color-empty';
+                if (value.count >= 120) return 'color-github-4';
+                if (value.count >= 60) return 'color-github-3';
+                if (value.count >= 30) return 'color-github-2';
+                if (value.count >= 1) return 'color-github-1';
+                return 'color-empty';
+              }}
+              tooltipDataAttrs={(value: any) => {
+                return {
+                  'data-tip': value?.date
+                    ? `${value.date.toISOString().split('T')[0]}: ${value.count || 0} min studied`
+                    : 'No activity',
+                };
+              }}
+              showWeekdayLabels={true}
+              squareSize={12}
+              gutterSize={3}
+              horizontal={true}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: 12, fontSize: 13, color: 'hsl(var(--muted-foreground))' }}>
+              Less
+              <span style={{ display: 'flex', gap: 2, margin: '0 8px' }}>
+                <span className="dark:bg-[hsl(var(--muted)/0.3)] bg-[#ebedf0]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.2)', borderRadius: 2, marginLeft: 4 }} />
+                <span className="dark:bg-[#0e4429] bg-[#9be9a8]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.3)', borderRadius: 2, marginLeft: 2 }} />
+                <span className="dark:bg-[#006d32] bg-[#40c463]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.3)', borderRadius: 2, marginLeft: 2 }} />
+                <span className="dark:bg-[#26a641] bg-[#30a14e]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.3)', borderRadius: 2, marginLeft: 2 }} />
+                <span className="dark:bg-[#39d353] bg-[#216e39]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.3)', borderRadius: 2, marginLeft: 2 }} />
+              </span>
+              More
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

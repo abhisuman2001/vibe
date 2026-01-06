@@ -1,3 +1,5 @@
+// Abhishek Suman made changes: Cleaned up duplicate imports and class definitions
+
 import {User} from '#auth/classes/transformers/User.js';
 import {UserService} from '#users/services/UserService.js';
 import {USERS_TYPES} from '#users/types.js';
@@ -32,6 +34,25 @@ export class UserController {
     @inject(AUTH_TYPES.AuthService)
     private readonly authService: IAuthService,
   ) {}
+
+  // Abhishek Suman made changes: Get user daily study time activity for heatmap
+  @OpenAPI({
+    summary: 'Get user study time activity by day',
+    description: 'Returns an array of {date, count} where count is study time (minutes) for each day.'
+  })
+  @Authorized()
+  @Get('/:userId/activity')
+  @HttpCode(200)
+  async getUserActivityByDay(
+    @Params() params: GetUserParams,
+    @Req() req: any
+  ): Promise<{ date: string, count: number }[]> {
+    const { userId } = params;
+    // Get year from query string
+    const year = req.query?.year ? parseInt(req.query.year, 10) : undefined;
+    // Returns [{ date: 'YYYY-MM-DD', count: minutes }]
+    return await this.userService.getUserStudyActivityByDay(userId, year);
+  }
 
   @OpenAPI({
     summary: 'Get user information by user ID',

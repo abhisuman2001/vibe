@@ -515,10 +515,10 @@ export default function UserProfile({ role = "student" }: { role?: "student" | "
               Less
               <span style={{ display: 'flex', gap: 2, margin: '0 8px' }}>
                 <span className="dark:bg-[hsl(var(--muted)/0.3)] bg-[#ebedf0]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.2)', borderRadius: 2, marginLeft: 4 }} />
-                <span className="dark:bg-[#0e4429] bg-[#9be9a8]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.3)', borderRadius: 2, marginLeft: 2 }} />
-                <span className="dark:bg-[#006d32] bg-[#40c463]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.3)', borderRadius: 2, marginLeft: 2 }} />
-                <span className="dark:bg-[#26a641] bg-[#30a14e]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.3)', borderRadius: 2, marginLeft: 2 }} />
-                <span className="dark:bg-[#39d353] bg-[#216e39]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.3)', borderRadius: 2, marginLeft: 2 }} />
+                <span className="dark:bg-[#ffdd00] bg-[#ffbb00]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.3)', borderRadius: 2, marginLeft: 2 }} />
+                <span className="dark:bg-[#f5b700] bg-[#e6a800]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.3)', borderRadius: 2, marginLeft: 2 }} />
+                <span className="dark:bg-[#a87d00] bg-[#997000]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.3)', borderRadius: 2, marginLeft: 2 }} />
+                <span className="dark:bg-[#5c4000] bg-[#4d3800]" style={{ width: 12, height: 12, border: '1px solid hsl(var(--border) / 0.3)', borderRadius: 2, marginLeft: 2 }} />
               </span>
               More
             </div>
